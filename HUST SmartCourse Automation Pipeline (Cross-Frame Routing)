@@ -1,0 +1,80 @@
+// ==UserScript==
+// @name         HUST SmartCourse Automation Pipeline (Cross-Frame Routing)
+// @namespace    http://tampermonkey.net/
+// @version      1.2.0
+// @description  Bypass visibility constraints, handle iframe isolation, and automate media progression
+// @author       Engineering Consultant
+// @match        *://*/*
+// @grant        none
+// @run-at       document-end
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    // 1. 强制覆盖原生可见性状态，阻断失焦暂停机制
+    try {
+        Object.defineProperty(document, 'hidden', {value: false, writable: false});
+        Object.defineProperty(document, 'visibilityState', {value: 'visible', writable: false});
+        window.addEventListener('visibilitychange', e => e.stopImmediatePropagation(), true);
+        window.addEventListener('blur', e => e.stopImmediatePropagation(), true);
+    } catch (e) {
+        console.warn('[Pipeline] Visibility API override soft locked.');
+    }
+
+    // 2. 状态机轮询
+    const pipelineInterval = setInterval(() => {
+        const videoElement = document.getElementById('video_html5_api') || document.querySelector('video.vjs-tech');
+
+        if (videoElement) {
+            clearInterval(pipelineInterval);
+            console.log('[Pipeline] Target video element hooked. Injecting control logic...');
+
+            videoElement.muted = true;
+            videoElement.playbackRate = 1.5;
+
+            if(videoElement.paused) {
+                videoElement.play().catch(e => console.error('[Pipeline] Auto-play blocked:', e));
+            }
+
+            // 3. 跨框架寻址逻辑
+            videoElement.addEventListener('ended', function() {
+                console.log('[Pipeline] Media stream ended. Executing cross-frame DOM routing...');
+
+                // 立即计算目标节点，防止原生业务脚本刷新 DOM 导致状态丢失
+                let targetDoc;
+                try {
+                    // 尝试突破 Iframe 获取顶层文档控制权
+                    targetDoc = window.top.document;
+                } catch(e) {
+                    console.error('[Pipeline] FATAL: Cross-Origin Frame blocking DOM access.', e);
+                    return;
+                }
+
+                // 精确获取所有“课时”节点，过滤掉带有 'firstLayer' 的“章节”标题节点
+                const allLessons = Array.from(targetDoc.querySelectorAll('.posCatalog_select:not(.firstLayer)'));
+                const currentIndex = allLessons.findIndex(el => el.classList.contains('posCatalog_active'));
+
+                if (currentIndex !== -1 && currentIndex + 1 < allLessons.length) {
+                    const nextLessonNode = allLessons[currentIndex + 1];
+                    const clickTarget = nextLessonNode.querySelector('.posCatalog_name');
+
+                    if (clickTarget) {
+                        const targetName = clickTarget.getAttribute('title') || 'Unknown Node';
+                        console.log(`[Pipeline] Next node identified: [${targetName}]. Queuing click execution.`);
+
+                        // 延迟 3 秒执行物理点击，让位给原生 ed_complete.js 结算数据
+                        setTimeout(() => {
+                            console.log('[Pipeline] Executing jump...');
+                            clickTarget.click();
+                        }, 3000);
+                    } else {
+                        console.error('[Pipeline] FATAL: Next node missing executable trigger.');
+                    }
+                } else {
+                    console.log('[Pipeline] EOF reached or active node unidentifiable in parent frame. Pipeline halted.');
+                }
+            });
+        }
+    }, 2000);
+})();
