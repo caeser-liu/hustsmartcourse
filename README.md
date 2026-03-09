@@ -21,5 +21,5 @@
 1. 点击浏览器扩展栏的 Tampermonkey 图标，选择 **“添加新脚本” (Create a new script...)**。
 2. **彻底清空**编辑器内自带的所有默认模板代码。
 3. 复制本项目目录下的代码，按下 Ctrl + S 保存并退出。确保 Tampermonkey 仪表板中该脚本处于启用（绿色）状态。
-🛑 已知工程限制 (Limitations)
+## 🛑 已知工程限制 (Limitations)
 目前无法在最小化之后播放，注意
