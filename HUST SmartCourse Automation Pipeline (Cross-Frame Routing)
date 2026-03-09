@@ -31,7 +31,7 @@
             console.log('[Pipeline] Target video element hooked. Injecting control logic...');
 
             videoElement.muted = true;
-            videoElement.playbackRate = 1.5;
+            videoElement.playbackRate = 2;
 
             if(videoElement.paused) {
                 videoElement.play().catch(e => console.error('[Pipeline] Auto-play blocked:', e));
